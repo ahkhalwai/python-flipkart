@@ -52,7 +52,9 @@ Getting Access Token
 If you have registered an application with your seller credentials and
 would like to access resources in your account, you could use the
 application id and secret alone to do so. The authentication helper in the
-API gives you a convenient way to get tokens::
+API gives you a convenient way to get tokens
+
+.. code-block:: python
 
     from auth import Authentication
 
