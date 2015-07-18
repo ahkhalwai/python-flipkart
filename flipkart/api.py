@@ -311,7 +311,6 @@ class PaginationIterator(object):
             cast_func = lambda item: item
         self.cast_func = cast_func
 
-        self._current_index = -1
         self._nextPageUrl = None
 
         self.update_items_from(response)
@@ -324,13 +323,14 @@ class PaginationIterator(object):
         self._nextPageUrl = response.get('nextPageUrl')
 
     def __iter__(self):
+        self._current_index = -1
         return self
 
     @property
     def count(self):
         return len(self.items)
 
-    def next(self):
+    def __next__(self):
         self._current_index += 1
 
         if self._current_index >= self.count and self._nextPageUrl:
