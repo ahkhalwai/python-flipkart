@@ -2,8 +2,8 @@
 Python Flipkart Marketplace API Client
 ======================================
 
-.. image:: https://img.shields.io/travis/fulfilio/python-flipkart.svg
-        :target: https://travis-ci.org/fulfilio/python-flipkart
+.. image:: https://img.shields.io/travis/fulfilio/python-flipkart-api.svg
+        :target: https://travis-ci.org/fulfilio/python-flipkart-api
 
 .. image:: https://img.shields.io/pypi/v/python-flipkart.svg
         :target: https://pypi.python.org/pypi/python-flipkart
@@ -52,7 +52,9 @@ Getting Access Token
 If you have registered an application with your seller credentials and
 would like to access resources in your account, you could use the
 application id and secret alone to do so. The authentication helper in the
-API gives you a convenient way to get tokens::
+API gives you a convenient way to get tokens
+
+.. code-block:: python
 
     from auth import Authentication
 

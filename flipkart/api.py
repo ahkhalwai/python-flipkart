@@ -282,7 +282,6 @@ class OrderItem(FlipkartResource):
             body=body,
             method="POST"
         )
-        print "response", response
         return PaginationIterator(
             client, response,
             'orderItems',
@@ -312,7 +311,6 @@ class PaginationIterator(object):
             cast_func = lambda item: item
         self.cast_func = cast_func
 
-        self._current_index = -1
         self._nextPageUrl = None
 
         self.update_items_from(response)
@@ -325,13 +323,14 @@ class PaginationIterator(object):
         self._nextPageUrl = response.get('nextPageUrl')
 
     def __iter__(self):
+        self._current_index = -1
         return self
 
     @property
     def count(self):
         return len(self.items)
 
-    def next(self):
+    def __next__(self):
         self._current_index += 1
 
         if self._current_index >= self.count and self._nextPageUrl:
@@ -343,6 +342,8 @@ class PaginationIterator(object):
             return self.cast_func(self.items[self._current_index])
         else:
             raise StopIteration()
+
+    next = __next__
 
 
 class Listing(FlipkartResource):

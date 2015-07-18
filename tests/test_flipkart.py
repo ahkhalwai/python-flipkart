@@ -13,7 +13,7 @@ class TestPaginationClient:
         iterator = PaginationIterator(
             dummy_client, dummy_client.response('page-1'), 'items'
         )
-        assert list(iterator) == range(1, 10)
+        assert list(iterator) == list(range(1, 10))
 
     def test_two_pages(self, dummy_client):
         dummy_client.response = lambda link: {
@@ -28,7 +28,7 @@ class TestPaginationClient:
         iterator = PaginationIterator(
             dummy_client, dummy_client.response('page-1'), 'items'
         )
-        assert list(iterator) == range(1, 20)
+        assert list(iterator) == list(range(1, 20))
 
     def test_three_pages(self, dummy_client):
         dummy_client.response = lambda link: {
@@ -47,4 +47,4 @@ class TestPaginationClient:
         iterator = PaginationIterator(
             dummy_client, dummy_client.response('page-1'), 'items'
         )
-        assert list(iterator) == range(1, 30)
+        assert list(iterator) == list(range(1, 30))
