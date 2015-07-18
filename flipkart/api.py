@@ -343,6 +343,8 @@ class PaginationIterator(object):
         else:
             raise StopIteration()
 
+    next = __next__
+
 
 class Listing(FlipkartResource):
     """
