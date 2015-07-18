@@ -282,7 +282,6 @@ class OrderItem(FlipkartResource):
             body=body,
             method="POST"
         )
-        print "response", response
         return PaginationIterator(
             client, response,
             'orderItems',
