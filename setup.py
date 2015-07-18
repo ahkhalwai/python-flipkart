@@ -3,9 +3,24 @@
 
 
 try:
-    from setuptools import setup
+    from setuptools import setup, Command
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup, Command
+
+
+class PyTest(Command):
+    user_options = []
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import subprocess
+        import sys
+        errno = subprocess.call([sys.executable, 'runtests.py'])
+        raise SystemExit(errno)
 
 
 with open('README.rst') as readme_file:
@@ -24,7 +39,7 @@ test_requirements = [
 ]
 
 setup(
-    name='python-flipkart',
+    name='flipkart',
     version='0.1.0',
     description="Python Flipkart Marketplace API Client",
     long_description=readme + '\n\n' + history,
@@ -52,6 +67,5 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
-    test_suite='tests',
-    tests_require=test_requirements
+    cmdclass={'test': PyTest},
 )
