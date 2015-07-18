@@ -21,7 +21,7 @@ From PYPI:
 
 .. code-block:: shell
 
-   $ pip install flipkart
+   $ pip install python-flipkart
 
 From source code (advanced users and for development):
 
