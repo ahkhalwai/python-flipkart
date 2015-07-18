@@ -4,5 +4,5 @@ __author__ = 'Fulfi.IO Inc.'
 __email__ = 'help@fulfil.io'
 __version__ = '0.0.1'
 
-from api import FlipkartAPI         # noqa
-from auth import Authentication     # noqa
+from .api import FlipkartAPI         # noqa
+from .auth import Authentication     # noqa
