@@ -2,8 +2,8 @@
 Python Flipkart Marketplace API Client
 ======================================
 
-.. image:: https://img.shields.io/travis/fulfilio/python-flipkart.svg
-        :target: https://travis-ci.org/fulfilio/python-flipkart
+.. image:: https://img.shields.io/travis/fulfilio/python-flipkart-api.svg
+        :target: https://travis-ci.org/fulfilio/python-flipkart-api
 
 .. image:: https://img.shields.io/pypi/v/python-flipkart.svg
         :target: https://pypi.python.org/pypi/python-flipkart
