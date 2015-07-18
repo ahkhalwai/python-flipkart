@@ -52,7 +52,7 @@ coverage:
 docs:
 	rm -f docs/python-flipkart.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ python-flipkart
+	sphinx-apidoc -o docs/ flipkart
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html
