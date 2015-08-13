@@ -110,7 +110,7 @@ class FlipkartAPI(object):
         response_json = response.json()
 
         if response_json.get('status') == 'failure':
-            raise FlipkartMultiError(response_json['errors'])
+            raise FlipkartMultiError(response_json['response']['errors'])
 
         return response_json
 
@@ -170,7 +170,9 @@ class FlipkartMultiError(BaseFlipkartError):
                 FlipkartError(error['errorCode'], error['message'])
             )
         super(FlipkartMultiError, self).__init__(
-            '%d errors in request' % len(self.errors)
+            '%d errors in request\n' % len(self.errors) + '\n'.join([
+                'ERR::%s: %s' % error.args for error in self.errors
+            ])
         )
 
 
