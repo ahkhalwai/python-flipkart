@@ -280,6 +280,14 @@ class SKU(FlipkartResource):
             )
         ]
 
+    @property
+    def listing(self):
+        """
+        Return the listing of the product
+        """
+        listings = self.listings
+        return listings[0] if listings else None
+
 
 class OrderItem(FlipkartResource):
     """
