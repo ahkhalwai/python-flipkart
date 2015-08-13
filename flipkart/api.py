@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
+from urllib import urlencode
 from functools import partial
 
 import requests
@@ -64,10 +65,14 @@ class FlipkartAPI(object):
     def build_url(self, path, params=None):
         """
         Given a path construct the full URL for sandbox or production
+
+        :param params: Should be a list of key value pairs or dictionary
         """
-        # TODO: Handle parameters
         if path.startswith('/'):
             path = path[1:]
+
+        if params is not None:
+            path += '?' + urlencode(params)
 
         if self.sandbox:
             return 'https://sandbox-api.flipkart.net/sellers/' + path
