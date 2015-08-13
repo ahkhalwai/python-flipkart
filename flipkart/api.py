@@ -140,6 +140,49 @@ class FlipkartAPI(object):
         """
         return OrderItem.search(self, filters, page_size, sort)
 
+    def order_item(self, order_item_id):
+        """
+        Fetch a specific order item
+        """
+        return OrderItem(order_item_id, self)
+
+    def order_items(self, *order_item_ids):
+        """
+        Fetch multiple order items
+        """
+        return OrderItem.get_many(self, order_item_ids)
+
+    def create_test_orders(self, *orders):
+        """
+        Flipkart provides a convenient API to create test orders on sandbox.
+
+        Returns a list of order_item objects.
+
+        Example::
+
+            flipkart.create_test_orders(
+                # Listing ID, quantity
+                ('listing_id_1', 2),
+                ('listing_id_2', 4),
+            )
+
+        :param orders: list of pair of listing and quantity
+        """
+        assert self.sandbox, "You must be on sandbox to use create_test_orders"
+
+        body = {'orders': []}
+        for listing, quantity in orders:
+            if isinstance(listing, Listing):
+                listing = listing.listing_id
+            body['orders'].append({
+                'listing_id': listing,
+                'quantity': quantity
+            })
+        response = self.request(
+            'orders/test/create-orders', method="POST", body=body
+        )
+        return self.order_items(*response['orderItemIds'])
+
 
 class BaseFlipkartError(Exception):
     """
