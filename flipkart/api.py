@@ -114,11 +114,11 @@ class FlipkartAPI(object):
 
         return response_json
 
-    def sku(self, sku_id):
+    def sku(self, sku_id, fsn=None):
         """
         Get a SKU
         """
-        return SKU(sku_id, self)
+        return SKU(sku_id, self, fsn)
 
     def listing(self, listing_id):
         """
@@ -197,9 +197,10 @@ class SKU(FlipkartResource):
     :param sku_id: ID of the SKU
     :param client: The client connection the SKU will use to fetch and update
     """
-    def __init__(self, sku_id, client):
+    def __init__(self, sku_id, client, fsn=None):
         self.sku_id = sku_id
         self.client = client
+        self.fsn = fsn
 
     def create_listing(self, **attributes):
         """
