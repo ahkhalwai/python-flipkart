@@ -442,18 +442,25 @@ class OrderItem(FlipkartResource):
                 ]
 
         """
+        if serial_numbers is None:
+            serial_numbers = []
         data = {
             "orderItemId": self.order_item_id,  # Order item ID,
             "serialNumbers": serial_numbers,
             "invoiceDate": invoice_date.isoformat(),
             "invoiceNumber": invoice_number,
             "tax": tax,
+            "subItems": [],
         }
         if sub_items is not None:
             data['subItems'] = sub_items
+
+        # Unlike other APIs this one is awkward. Expects you to look into
+        # the response header for a Location header and then get the
+        # label request ID from it. Yucks!
         response = self.client.request(
             'orders/labels', body=[data],
-            method='POST'
+            method='POST', process_response=False
         )
         # TODO: Return the label request ID
 
