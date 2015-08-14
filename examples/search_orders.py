@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+An example just to give you a good idea about how this API works.
+Use them for testing your API key, but do not ever use it in production.
+"""
 import os
 import random
 from flipkart import FlipkartAPI, Authentication
@@ -13,7 +17,6 @@ token = auth.get_token_from_client_credentials()
 
 # Get a flipkart client
 flipkart = FlipkartAPI(token['access_token'], sandbox=True, debug=True)
-
 
 
 def get_listings_of(sku):
@@ -41,11 +44,6 @@ def create_listing(sku, fsn):
     listing.save()
 
 
-#get_listings_of('my-special-sku')
-#create_listing('my-special-sku-3', 'TSHDBN332XDYBZ5M')
-#get_listings_of('my-special-sku-3')
-
-
 def create_test_orders():
     skus = [
         flipkart.sku('my-special-sku'),
@@ -58,7 +56,12 @@ def create_test_orders():
     )
     return order_items
 
-create_test_orders()
-response = list(flipkart.search_orders())
 
-print "Number of orders: %d" % len(response)
+if __name__ == '__main__':
+    get_listings_of('my-special-sku')
+    create_listing('my-special-sku-3', 'TSHDBN332XDYBZ5M')
+    get_listings_of('my-special-sku-3')
+    create_test_orders()
+    response = list(flipkart.search_orders())
+
+    print "Number of orders: %d" % len(response)

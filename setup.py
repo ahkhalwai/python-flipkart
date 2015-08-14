@@ -10,6 +10,7 @@ except ImportError:
 
 class PyTest(Command):
     user_options = []
+
     def initialize_options(self):
         pass
 
