@@ -462,7 +462,128 @@ class OrderItem(FlipkartResource):
             'orders/labels', body=[data],
             method='POST', process_response=False
         )
-        # TODO: Return the label request ID
+        response.raise_for_status()
+        return LabelRequest.from_location(
+            response.headers['Location'], self.client
+        )
+
+    def get_label(self):
+        """
+        Get the label for the order item. The returned object is a PDF file
+        content.
+        """
+        response = self.client.request(
+            'orders/labels',
+            params=[('orderItemId', self.order_item_id)],
+            process_response=False,
+        )
+        response.raise_for_status()
+        return response.content
+
+    def cancel(self, reason):
+        """
+        The Cancel Orders API enables the seller to cancel an order that may
+        already have been approved by the Flipkart Marketplace.
+
+        For valid reasons refer:
+        https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html#id12
+        """
+        response = self.client.request(
+            'orders/cancel', method="POST", body=[
+                {
+                    'orderItemId': self.order_item_id,
+                    'reason': reason
+                }
+            ]
+        )
+        return response
+
+    def dispatch(self, quantity=None):
+        """
+        The Dispatch Orders API marks order items as “Ready to Dispatch” and
+        communicates to the logistics partners that the order is ready for
+        pick up.
+
+        :param quantity: If the quantity is not specified, the quantity of the
+                         order is taken as the quantity.
+        """
+        if quantity is None and not self.attributes.get('quantity'):
+            raise Exception('Quantity could not be inferred from order data')
+
+        if quantity is None:
+            quantity = self.attributes['quantity']
+
+        return self.dispatch_many(
+            self.client, [(self.order_item_id, quantity)]
+        )[0]
+
+    @classmethod
+    def dispatch_many(cls, client, order_item_qty_pairs):
+        """
+        Mark several order items to dispatch at once
+
+        :param order_item_qty_pairs: pairs of ('item_id', quantity)
+                                     Ex: [('id1', 2), ('id3', 1)]
+        """
+        response = client.request(
+            'orders/dispatch', method="POST", body={
+                'orderItems': [{
+                    'orderItem': item_qty_pair[0],
+                    'quantity': item_qty_pair[1],
+                } for item_qty_pair in order_item_qty_pairs]
+            }
+        )
+        return response['orderItems']
+
+    def get_shipment_details(self):
+        """
+        Returns the shipment details of the order item
+        """
+        return self.get_shipment_details_many(
+            self.client, [self.order_item_id]
+        )[0]
+
+    @classmethod
+    def get_shipment_details_many(cls, client, order_item_ids):
+        """
+        get shipment details of several order items at once
+        """
+        response = client.request(
+            'orders/shipments',
+            params=[('orderItemsIds', ','.join(order_item_ids))]
+        )
+        return response['shipments']
+
+
+class LabelRequest(FlipkartResource):
+    """
+    A Label for a order item
+    """
+    def __init__(self, label_request_id, client):
+        self.label_request_id = label_request_id
+        self.client = client
+
+    @classmethod
+    def from_location(cls, location, client):
+        """
+        Parses the label_request_id from the location and returns an instance
+        of the label request object
+        """
+        return cls(location.rsplit('/', 1)[-1], client)
+
+    def refresh_status(self):
+        """
+        Returns the status of the label.
+
+        The Label Request API checks the packing request status. It gets the
+        label request status of the order items as marked by the sellers and
+        returns the number of items, completed or invalidated, and the overall
+        completion status.
+        """
+        response = self.client.request(
+            '/orders/labelRequest/%s' % self.label_request_id,
+        )
+        return response
 
 
 class PaginationIterator(object):
