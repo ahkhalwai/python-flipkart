@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Fulfi.IO Inc. <help@fulfil.io>
+* Sharoon Thomas, Fulfi.IO Inc. <sharoon.thomas@fulfil.io>
 
 Contributors
 ------------

@@ -10,6 +10,7 @@ except ImportError:
 
 class PyTest(Command):
     user_options = []
+
     def initialize_options(self):
         pass
 
@@ -26,7 +27,7 @@ class PyTest(Command):
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
+with open('CHANGELOG.rst') as history_file:
     history = history_file.read().replace('.. :changelog:', '')
 
 requirements = [
@@ -40,7 +41,7 @@ test_requirements = [
 
 setup(
     name='python-flipkart',
-    version='0.1.2',
+    version='0.2.0',
     description="Python Flipkart Marketplace API Client",
     long_description=readme + '\n\n' + history,
     author="Fulfi.IO Inc.",

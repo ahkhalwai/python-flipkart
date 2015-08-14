@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
+from urllib import urlencode
 from functools import partial
 
 import requests
@@ -64,19 +65,28 @@ class FlipkartAPI(object):
     def build_url(self, path, params=None):
         """
         Given a path construct the full URL for sandbox or production
+
+        :param params: Should be a list of key value pairs or dictionary
         """
-        # TODO: Handle parameters
         if path.startswith('/'):
             path = path[1:]
+
+        if params is not None:
+            path += '?' + urlencode(params)
 
         if self.sandbox:
             return 'https://sandbox-api.flipkart.net/sellers/' + path
         else:
             return 'https://api.flipkart.net/sellers/' + path
 
-    def request(self, path, params=None, body=None, method="GET"):
+    def request(
+            self, path, params=None, body=None, method="GET",
+            process_response=True):
         """
         Makes a request and sends the response body back.
+
+        :param process_response: Parse JSON from the response and raise errors
+                                 if any in the response from flipkart.
         """
         url = self.build_url(path, params)
         self.logger.debug("Request:URL: %s", url)
@@ -99,21 +109,25 @@ class FlipkartAPI(object):
         self.logger.debug("Response:code: %s", response.status_code)
         self.logger.debug("Response:content: %s", response.content)
 
+        if process_response is False:
+            # Don't process the response
+            return response
+
         # Raise an error if the response is not 2XX
         response.raise_for_status()
 
         response_json = response.json()
 
         if response_json.get('status') == 'failure':
-            raise FlipkartMultiError(response_json['errors'])
+            raise FlipkartMultiError(response_json['response']['errors'])
 
         return response_json
 
-    def sku(self, sku_id):
+    def sku(self, sku_id, fsn=None):
         """
         Get a SKU
         """
-        return SKU(sku_id, self)
+        return SKU(sku_id, self, fsn)
 
     def listing(self, listing_id):
         """
@@ -134,6 +148,55 @@ class FlipkartAPI(object):
         Search through the orders
         """
         return OrderItem.search(self, filters, page_size, sort)
+
+    def order_item(self, order_item_id):
+        """
+        Fetch a specific order item
+        """
+        return OrderItem(order_item_id, self)
+
+    def order_items(self, *order_item_ids):
+        """
+        Fetch multiple order items
+        """
+        return OrderItem.get_many(self, order_item_ids)
+
+    def label_request(self, label_request_id):
+        """
+        Get the Label object corresponding to a request id
+        """
+        return LabelRequest(label_request_id, self)
+
+    def create_test_orders(self, *orders):
+        """
+        Flipkart provides a convenient API to create test orders on sandbox.
+
+        Returns a list of order_item objects.
+
+        Example::
+
+            flipkart.create_test_orders(
+                # Listing ID, quantity
+                ('listing_id_1', 2),
+                ('listing_id_2', 4),
+            )
+
+        :param orders: list of pair of listing and quantity
+        """
+        assert self.sandbox, "You must be on sandbox to use create_test_orders"
+
+        body = {'orders': []}
+        for listing, quantity in orders:
+            if isinstance(listing, Listing):
+                listing = listing.listing_id
+            body['orders'].append({
+                'listing_id': listing,
+                'quantity': quantity
+            })
+        response = self.request(
+            'orders/test/create_orders', method="POST", body=body
+        )
+        return map(self.order_item, response['orderItemIds'])
 
 
 class BaseFlipkartError(Exception):
@@ -165,7 +228,9 @@ class FlipkartMultiError(BaseFlipkartError):
                 FlipkartError(error['errorCode'], error['message'])
             )
         super(FlipkartMultiError, self).__init__(
-            '%d errors in request' % len(self.errors)
+            '%d errors in request\n' % len(self.errors) + '\n'.join([
+                'ERR::%s: %s' % error.args for error in self.errors
+            ])
         )
 
 
@@ -190,9 +255,10 @@ class SKU(FlipkartResource):
     :param sku_id: ID of the SKU
     :param client: The client connection the SKU will use to fetch and update
     """
-    def __init__(self, sku_id, client):
+    def __init__(self, sku_id, client, fsn=None):
         self.sku_id = sku_id
         self.client = client
+        self.fsn = fsn
 
     def create_listing(self, **attributes):
         """
@@ -229,6 +295,14 @@ class SKU(FlipkartResource):
             )
         ]
 
+    @property
+    def listing(self):
+        """
+        Return the listing of the product
+        """
+        listings = self.listings
+        return listings[0] if listings else None
+
 
 class OrderItem(FlipkartResource):
     """
@@ -240,6 +314,40 @@ class OrderItem(FlipkartResource):
     def __init__(self, order_item_id, client, attributes=None):
         self.order_item_id = order_item_id
         self.attributes = attributes
+        self.client = client
+
+        if self.order_item_id and self.attributes is None:
+            self.refresh_attributes()
+
+    @property
+    def listing(self):
+        """
+        Return the listing object corresponding to the order
+        """
+        return self.client.listing(
+            self.attributes['listingId'],
+            self.attributes['sku']
+        )
+
+    @property
+    def sku(self):
+        """
+        Return the SKU object
+        """
+        return self.client.sku(
+            self.attributes['sku'], self.attributes['fsn']
+        )
+
+    @property
+    def sub_items(self):
+        """
+        Return sub items of an order
+        """
+        return [
+            self.__class__(
+                subitem['orderItemId'], self.client, subitem
+            ) for subitem in self.attributes.get('subItems')
+        ]
 
     def refresh_attributes(self):
         """
@@ -250,10 +358,18 @@ class OrderItem(FlipkartResource):
         )
         self.attributes = response
 
-    def __getattr__(self, name):
-        if self.attributes is not None and name in self.attributes:
-            return self.attributes[name]
-        raise AttributeError(name)
+    @classmethod
+    def get_many(cls, client, order_item_ids):
+        """
+        Get multiple order items at once
+        """
+        response = client.request(
+            'orders', params={'orderItemIds': ','.join(order_item_ids)}
+        )
+        return [
+            cls(order_item['orderItemId'], client, order_item)
+            for order_item in response
+        ]
 
     @classmethod
     def search(cls, client, filters=None, page_size=None, sort=None):
@@ -289,6 +405,191 @@ class OrderItem(FlipkartResource):
                 item['orderItemId'], attributes=item
             )
         )
+
+    def generate_label(
+            self, invoice_date, invoice_number, serial_numbers=None,
+            tax=None, sub_items=None):
+        """
+        marks orders as packed and creates a labelRequest for multiple
+        order items. It takes the invoice details in the request as input.
+        If the orderItemId requires a serial number or IMEI number (also
+        known as serialized product), that input is also required when calling
+        this API.
+
+        :param invoice_date: datetime.Date object for invoice date
+        :param invoice_number: string representing invoice number
+        :param serial_number: See note below
+        :param tax: Amount of tax
+        :param sub_items: List of dictionary, See not below
+
+        .. note::
+
+            While the first level order item information is encoded from the
+            arguments passed to this method, sub_items must be manually
+            constructed by the user. A list of dictionary like in the example
+            should be sufficient.
+
+        .. note::
+
+            Specifying serial numbers is tricky. It is trickiest for mobile
+            phones that have multiple sim support and hence multiple IMEIs.
+            here is a rough idea on how to construct one::
+
+                serial_numbers = []
+                for each_unit in quantity:
+                    unit_imeis = [unit1_sim1_imei, unit1_sim2_imei]
+                    serial_numbers.append(unit_imeis)
+
+            If a customer bought two dual sim phones::
+
+                [
+                    [unit1_sim1_imei, unit1_sim2_imei],
+                    [unit2_sim1_imei, unit2_sim2_imei],
+                ]
+
+        """
+        if serial_numbers is None:
+            serial_numbers = []
+        data = {
+            "orderItemId": self.order_item_id,  # Order item ID,
+            "serialNumbers": serial_numbers,
+            "invoiceDate": invoice_date.isoformat(),
+            "invoiceNumber": invoice_number,
+            "tax": tax,
+            "subItems": [],
+        }
+        if sub_items is not None:
+            data['subItems'] = sub_items
+
+        # Unlike other APIs this one is awkward. Expects you to look into
+        # the response header for a Location header and then get the
+        # label request ID from it. Yucks!
+        response = self.client.request(
+            'orders/labels', body=[data],
+            method='POST', process_response=False
+        )
+        response.raise_for_status()
+        return LabelRequest.from_location(
+            response.headers['Location'], self.client
+        )
+
+    def get_label(self):
+        """
+        Get the label for the order item. The returned object is a PDF file
+        content.
+        """
+        response = self.client.request(
+            'orders/labels',
+            params=[('orderItemId', self.order_item_id)],
+            process_response=False,
+        )
+        response.raise_for_status()
+        return response.content
+
+    def cancel(self, reason):
+        """
+        The Cancel Orders API enables the seller to cancel an order that may
+        already have been approved by the Flipkart Marketplace.
+
+        For valid reasons refer:
+        https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html#id12
+        """
+        response = self.client.request(
+            'orders/cancel', method="POST", body=[
+                {
+                    'orderItemId': self.order_item_id,
+                    'reason': reason
+                }
+            ]
+        )
+        return response
+
+    def dispatch(self, quantity=None):
+        """
+        The Dispatch Orders API marks order items as “Ready to Dispatch” and
+        communicates to the logistics partners that the order is ready for
+        pick up.
+
+        :param quantity: If the quantity is not specified, the quantity of the
+                         order is taken as the quantity.
+        """
+        if quantity is None and not self.attributes.get('quantity'):
+            raise Exception('Quantity could not be inferred from order data')
+
+        if quantity is None:
+            quantity = self.attributes['quantity']
+
+        return self.dispatch_many(
+            self.client, [(self.order_item_id, quantity)]
+        )[0]
+
+    @classmethod
+    def dispatch_many(cls, client, order_item_qty_pairs):
+        """
+        Mark several order items to dispatch at once
+
+        :param order_item_qty_pairs: pairs of ('item_id', quantity)
+                                     Ex: [('id1', 2), ('id3', 1)]
+        """
+        response = client.request(
+            'orders/dispatch', method="POST", body={
+                'orderItems': [{
+                    'orderItem': item_qty_pair[0],
+                    'quantity': item_qty_pair[1],
+                } for item_qty_pair in order_item_qty_pairs]
+            }
+        )
+        return response['orderItems']
+
+    def get_shipment_details(self):
+        """
+        Returns the shipment details of the order item
+        """
+        return self.get_shipment_details_many(
+            self.client, [self.order_item_id]
+        )[0]
+
+    @classmethod
+    def get_shipment_details_many(cls, client, order_item_ids):
+        """
+        get shipment details of several order items at once
+        """
+        response = client.request(
+            'orders/shipments',
+            params=[('orderItemsIds', ','.join(order_item_ids))]
+        )
+        return response['shipments']
+
+
+class LabelRequest(FlipkartResource):
+    """
+    A Label for a order item
+    """
+    def __init__(self, label_request_id, client):
+        self.label_request_id = label_request_id
+        self.client = client
+
+    @classmethod
+    def from_location(cls, location, client):
+        """
+        Parses the label_request_id from the location and returns an instance
+        of the label request object
+        """
+        return cls(location.rsplit('/', 1)[-1], client)
+
+    def refresh_status(self):
+        """
+        Returns the status of the label.
+
+        The Label Request API checks the packing request status. It gets the
+        label request status of the order items as marked by the sellers and
+        returns the number of items, completed or invalidated, and the overall
+        completion status.
+        """
+        response = self.client.request(
+            '/orders/labelRequest/%s' % self.label_request_id,
+        )
+        return response
 
 
 class PaginationIterator(object):
@@ -385,12 +686,15 @@ class Listing(FlipkartResource):
         self.attributes = response['attributeValues']
         return response
 
-    def update(self, attributes):
+    def update(self, attributes=None, **kwargs):
         """
         Update listing attributes such as stock, price, and pocurement SLA
         for a particular ListingID. For a more convenient API use
         `listing.save()` once the attributes have been changed.
         """
+        if attributes is None:
+            attributes = {}
+        attributes.update(kwargs)
         self.attributes = self.client.request(
             'skus/listings/%s' % self.listing_id,
             body={'attributeValues': attributes},
@@ -406,13 +710,17 @@ class Listing(FlipkartResource):
             return self.update(self.attributes)
         else:
             # This is a new listing. So create a new listing
-            response = self.client.request(
+            self.client.request(
                 "skus/%s/listings" % self.sku.sku_id,
                 body={
-                    'fsn': None,    # XXX: Where is that coming from ??
+                    'skuId': self.sku.sku_id,
+                    'fsn': self.sku.fsn,
                     'attributeValues': self.attributes,
                 },
                 method="POST"
-            )['response']
-            self.listing_id = response['listingId']
-            self.refresh_attributes()
+            )
+            # XXX: Though the API docs seem to say there is a response
+            # in the response, there is no such thing. So return
+            # the first listing of the SKU
+            self.listing_id = self.sku.listings[0].listing_id
+            return self.refresh_attributes()
