@@ -46,6 +46,83 @@ Example Usage
     orders = flipkart.search_orders()
 
 
+Get listings of a SKU
+`````````````````````
+
+.. code-block:: python
+
+    sku = flipkart.sku('my-special-sku', fsn='TSHDBN3326TEZHQZ')
+    for listing in sku.listings:
+        print listing.attributes['mrp']
+
+
+Create a listing
+````````````````
+
+.. code-block:: python
+
+    sku = flipkart.sku('my-special-sku', fsn='TSHDBN3326TEZHQZ')
+    listing = sku.create_listing(
+        mrp=2400,
+        selling_price=2300,
+        listing_status="INACTIVE",
+        fulfilled_by="seller",
+        national_shipping_charge=20,
+        zonal_shipping_charge=20,
+        local_shipping_charge=20,
+        procurement_sla=3,
+        stock_count=23,
+    )
+    listing.save()
+    print listing.mrp
+
+Update a listing
+````````````````
+
+.. code-block:: python
+
+    listing = flipkart.listing('LSTTSHDBN332XDYBZ5MHX30XI')
+    listing.attributes['mrp'] = 2600
+    listing.save()
+
+
+Searching for orders
+````````````````````
+
+.. code-block:: python
+
+    orders = flipkart.search_orders()
+
+Find only orders of selected SKUs:
+
+.. code-block:: python
+
+    orders = flipkart.search_orders(
+        filters={'sku': ['my-sku-1', 'my-sku-2']}
+    )
+
+Filter by state:
+
+.. code-block:: python
+
+    orders = flipkart.search_orders(
+        filters={'states': ['Approved']}
+    )
+
+.. tip::
+
+   For a list of valid state see `API documentation 
+   <https://seller.flipkart.com/api-docs/order-api-docs/OMAPIOverview.html>`_
+
+Fetching a specific order item
+``````````````````````````````
+
+.. code-block:: python
+
+    order_item = flipkart.order_item('')
+
+
+
 Getting Access Token
 ````````````````````
 

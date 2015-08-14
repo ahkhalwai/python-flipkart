@@ -300,6 +300,39 @@ class OrderItem(FlipkartResource):
         self.order_item_id = order_item_id
         self.attributes = attributes
 
+        if self.order_item_id and self.attributes is None:
+            self.refresh_attributes()
+
+    @property
+    def listing(self):
+        """
+        Return the listing object corresponding to the order
+        """
+        return self.client.listing(
+            self.attributes['listingId'],
+            self.attributes['sku']
+        )
+
+    @property
+    def sku(self):
+        """
+        Return the SKU object
+        """
+        return self.client.sku(
+            self.attributes['sku'], self.attributes['fsn']
+        )
+
+    @property
+    def sub_items(self):
+        """
+        Return sub items of an order
+        """
+        return [
+            self.__class__(
+                subitem['orderItemId'], self.client, subitem
+            ) for subitem in self.attributes.get('subItems')
+        ]
+
     def refresh_attributes(self):
         """
         Fetch the order attributes from flipkart
@@ -309,10 +342,18 @@ class OrderItem(FlipkartResource):
         )
         self.attributes = response
 
-    def __getattr__(self, name):
-        if self.attributes is not None and name in self.attributes:
-            return self.attributes[name]
-        raise AttributeError(name)
+    @classmethod
+    def get_many(cls, client, order_item_ids):
+        """
+        Get multiple order items at once
+        """
+        response = client.request(
+            'orders', params={'orderItemIds': ','.join(order_item_ids)}
+        )
+        return [
+            cls(order_item['orderItemId'], client, order_item)
+            for order_item in response
+        ]
 
     @classmethod
     def search(cls, client, filters=None, page_size=None, sort=None):
@@ -348,6 +389,63 @@ class OrderItem(FlipkartResource):
                 item['orderItemId'], attributes=item
             )
         )
+
+    def generate_label(
+            self, invoice_date, invoice_number, serial_numbers=None,
+            tax=None, sub_items=None):
+        """
+        marks orders as packed and creates a labelRequest for multiple
+        order items. It takes the invoice details in the request as input.
+        If the orderItemId requires a serial number or IMEI number (also
+        known as serialized product), that input is also required when calling
+        this API.
+
+        :param invoice_date: datetime.Date object for invoice date
+        :param invoice_number: string representing invoice number
+        :param serial_number: See note below
+        :param tax: Amount of tax
+        :param sub_items: List of dictionary, See not below
+
+        .. note::
+
+            While the first level order item information is encoded from the
+            arguments passed to this method, sub_items must be manually
+            constructed by the user. A list of dictionary like in the example
+            should be sufficient.
+
+        .. note::
+
+            Specifying serial numbers is tricky. It is trickiest for mobile
+            phones that have multiple sim support and hence multiple IMEIs.
+            here is a rough idea on how to construct one::
+
+                serial_numbers = []
+                for each_unit in quantity:
+                    unit_imeis = [unit1_sim1_imei, unit1_sim2_imei]
+                    serial_numbers.append(unit_imeis)
+
+            If a customer bought two dual sim phones::
+
+                [
+                    [unit1_sim1_imei, unit1_sim2_imei],
+                    [unit2_sim1_imei, unit2_sim2_imei],
+                ]
+
+        """
+        data = {
+            "orderItemId": self.order_item_id,  # Order item ID,
+            "serialNumbers": serial_numbers,
+            "invoiceDate": invoice_date.isoformat(),
+            "invoiceNumber": invoice_number,
+            "tax": tax,
+        }
+        if sub_items is not None:
+            data['subItems'] = sub_items
+        response = self.client.request(
+            'orders/labels', body=[data],
+            method='POST'
+        )
+        # TODO: Return the label request ID
 
 
 class PaginationIterator(object):
@@ -444,12 +542,15 @@ class Listing(FlipkartResource):
         self.attributes = response['attributeValues']
         return response
 
-    def update(self, attributes):
+    def update(self, attributes=None, **kwargs):
         """
         Update listing attributes such as stock, price, and pocurement SLA
         for a particular ListingID. For a more convenient API use
         `listing.save()` once the attributes have been changed.
         """
+        if attributes is None:
+            attributes = {}
+        attributes.update(kwargs)
         self.attributes = self.client.request(
             'skus/listings/%s' % self.listing_id,
             body={'attributeValues': attributes},
@@ -465,13 +566,17 @@ class Listing(FlipkartResource):
             return self.update(self.attributes)
         else:
             # This is a new listing. So create a new listing
-            response = self.client.request(
+            self.client.request(
                 "skus/%s/listings" % self.sku.sku_id,
                 body={
-                    'fsn': None,    # XXX: Where is that coming from ??
+                    'skuId': self.sku.sku_id,
+                    'fsn': self.sku.fsn,
                     'attributeValues': self.attributes,
                 },
                 method="POST"
-            )['response']
-            self.listing_id = response['listingId']
-            self.refresh_attributes()
+            )
+            # XXX: Though the API docs seem to say there is a response
+            # in the response, there is no such thing. So return
+            # the first listing of the SKU
+            self.listing_id = self.sku.listings[0].listing_id
+            return self.refresh_attributes()
