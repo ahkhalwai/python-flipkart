@@ -41,7 +41,7 @@ test_requirements = [
 
 setup(
     name='python-flipkart',
-    version='0.1.2',
+    version='0.2.0',
     description="Python Flipkart Marketplace API Client",
     long_description=readme + '\n\n' + history,
     author="Fulfi.IO Inc.",
