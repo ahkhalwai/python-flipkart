@@ -308,6 +308,7 @@ class OrderItem(FlipkartResource):
     def __init__(self, order_item_id, client, attributes=None):
         self.order_item_id = order_item_id
         self.attributes = attributes
+        self.client = client
 
         if self.order_item_id and self.attributes is None:
             self.refresh_attributes()
