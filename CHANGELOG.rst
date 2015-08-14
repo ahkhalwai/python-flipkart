@@ -3,6 +3,12 @@
 History
 -------
 
+0.2.0
+`````
+
+* Major update with complete Order Item API
+* Added examples to the README
+
 0.1.2
 `````
 
