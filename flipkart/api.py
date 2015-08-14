@@ -161,6 +161,12 @@ class FlipkartAPI(object):
         """
         return OrderItem.get_many(self, order_item_ids)
 
+    def label_request(self, label_request_id):
+        """
+        Get the Label object corresponding to a request id
+        """
+        return LabelRequest(label_request_id, self)
+
     def create_test_orders(self, *orders):
         """
         Flipkart provides a convenient API to create test orders on sandbox.
