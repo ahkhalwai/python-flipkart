@@ -228,8 +228,9 @@ API gives you a convenient way to get tokens
 About Fulfil.IO
 ---------------
 
-.. image:: https://www.fulfil.io/static/images/logo-white.png
+.. image:: https://www.fulfil.io/static/images/logo.png
         :target: https://www.fulfil.io/
+
 
 
 `Fulfil.IO <https://www.fulfil.io/>`_ manages orders across Mobile, Social,
