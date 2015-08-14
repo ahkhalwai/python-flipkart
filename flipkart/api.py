@@ -79,9 +79,14 @@ class FlipkartAPI(object):
         else:
             return 'https://api.flipkart.net/sellers/' + path
 
-    def request(self, path, params=None, body=None, method="GET"):
+    def request(
+            self, path, params=None, body=None, method="GET",
+            process_response=True):
         """
         Makes a request and sends the response body back.
+
+        :param process_response: Parse JSON from the response and raise errors
+                                 if any in the response from flipkart.
         """
         url = self.build_url(path, params)
         self.logger.debug("Request:URL: %s", url)
@@ -103,6 +108,10 @@ class FlipkartAPI(object):
 
         self.logger.debug("Response:code: %s", response.status_code)
         self.logger.debug("Response:content: %s", response.content)
+
+        if process_response is False:
+            # Don't process the response
+            return response
 
         # Raise an error if the response is not 2XX
         response.raise_for_status()
