@@ -188,9 +188,9 @@ class FlipkartAPI(object):
                 'quantity': quantity
             })
         response = self.request(
-            'orders/test/create-orders', method="POST", body=body
+            'orders/test/create_orders', method="POST", body=body
         )
-        return self.order_items(*response['orderItemIds'])
+        return map(self.order_item, response['orderItemIds'])
 
 
 class BaseFlipkartError(Exception):
