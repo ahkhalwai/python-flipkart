@@ -13,6 +13,8 @@ Python Flipkart Marketplace API Client
 
 * Free software: BSD license
 * Documentation: https://python-flipkart.readthedocs.org.
+* Authors: `Fulfil.IO - order fulfillment and inventory management system
+  <https://www.fulfil.io/>`_
 
 Installing
 ----------
@@ -223,7 +225,16 @@ API gives you a convenient way to get tokens
     )
     auth.get_token_from_client_credentials()
 
-Features
---------
+About Fulfil.IO
+---------------
 
-* TODO
+.. image:: https://www.fulfil.io/static/images/logo-white.png
+        :target: https://www.fulfil.io/
+
+
+`Fulfil.IO <https://www.fulfil.io/>`_ manages orders across Mobile, Social,
+Online and Offline Channels. Flipkart is India's leading marketplace and
+the first integration of Fulfil.IO in India.
+
+This python module supports the Flipkart - Fulfil.IO order fulfilment and
+inventory management system integration.
