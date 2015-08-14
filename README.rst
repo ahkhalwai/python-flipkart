@@ -119,8 +119,89 @@ Fetching a specific order item
 
 .. code-block:: python
 
-    order_item = flipkart.order_item('')
+    order_item = flipkart.order_item('1731')
+    order_item.attributes['quantity']
 
+Or to get several order items at once
+
+.. code-block:: python
+
+    order_items = flipkart.order_items('1731', '1732')
+
+Once the order is ready to pack, generate a label
+
+.. code-block:: python
+
+    label_request = order_item.generate_label(
+        date.today(),   # Invoice date
+        'INV12345',     # Invoice number
+    )
+
+When there are items that need serial numbers
+
+.. code-block:: python
+
+    label_request = order_item.generate_label(
+        date.today(),   # Invoice date
+        'INV12345',     # Invoice number
+        [['IMEI1']],
+    )
+
+If the item was dual sim
+
+.. code-block:: python
+
+    label_request = order_item.generate_label(
+        date.today(),   # Invoice date
+        'INV12345',     # Invoice number
+        [['IMEI1', 'IMEI2']],
+    )
+
+If 2 units of dual sim mobiles
+
+.. code-block:: python
+
+    label_request = order_item.generate_label(
+        date.today(),   # Invoice date
+        'INV12345',     # Invoice number
+        [['IMEI1', 'IMEI2'], ['IMEI3', 'IMEI4']],
+    )
+
+The response of ``generate_label`` is a Label Request. The label request
+is a lazy API. The status can be refreshed by calling
+
+.. code-block:: python
+
+    label_request.refresh_status()
+
+Once the status is cleared, the item can be shipped out. To get the label
+to ship call the ``get_label`` method to get a PDF of the label and
+possibly the invoice.
+
+.. code-block:: python
+
+    pdf = order_item.get_label()
+
+Once your shipment is ready to be picked by Flipkart logistics partner,
+call the ready to ``dispatch`` API.
+
+
+.. code-block:: python
+
+    order_item.dispatch()
+
+
+Getting shipment details
+````````````````````````
+
+The Shipments API gives the shipping details for orderitems
+
+.. code-block:: python
+
+    order_item.get_shipment_details()
+
+the response items can be seen on `Flipkart API documentation 
+<https://seller.flipkart.com/api-docs/order-api-docs/OMAPIRef.html#get-orders-shipments-orderitemsids-id-list>`_
 
 
 Getting Access Token
