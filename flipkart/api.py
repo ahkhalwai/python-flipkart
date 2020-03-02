@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+# in Python 3 it's:
+# from urllib.parse import urlencode
+
 import json
 import logging
-from urllib import urlencode
+from urllib.parse import urlencode
 from functools import partial
 
 import requests
